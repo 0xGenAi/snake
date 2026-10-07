@@ -1,0 +1,9 @@
+{
+  "name": "tweet-snake",
+  "version": "1.0.0",
+  "description": "Multiplayer Snake that plays inside an X (Twitter) post as a player card. Everyone who opens the embed plays in the same world.",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "ws": "^8.18.0" }
+}

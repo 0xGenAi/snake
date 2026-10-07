@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Tweet Snake</title>
+<meta name="description" content="Snake inside a post. Everyone who opens this embed plays in the same world.">
+
+<!-- X (Twitter) player card: the game runs right in the timeline -->
+<meta name="twitter:card" content="player">
+<meta name="twitter:title" content="Join the Snake World">
+<meta name="twitter:description" content="Everyone who opens this embed plays in the same world.">
+<meta name="twitter:image" content="__BASE__/poster.png">
+<meta name="twitter:player" content="__BASE__/embed">
+<meta name="twitter:player:width" content="480">
+<meta name="twitter:player:height" content="480">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Join the Snake World">
+<meta property="og:description" content="Everyone who opens this embed plays in the same world.">
+<meta property="og:image" content="__BASE__/poster.png">
+<meta property="og:url" content="__BASE__/">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07090c;
+    --panel: rgba(10, 14, 19, .78);
+    --line: rgba(255, 255, 255, .09);
+    --text: #e9f1ea;
+    --muted: #7d8b84;
+    --accent: #7CFFB2;
+    --warn: #FF6B9A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
+    font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; -webkit-user-select: none; user-select: none; }
+  canvas { display: block; position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
+
+  .hud { position: fixed; pointer-events: none; font-size: 12px; line-height: 1.35; }
+  #stats { top: 10px; left: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; display: none; }
+  #stats b { font-family: 'Silkscreen', monospace; font-size: 18px; color: var(--accent); font-weight: 700; }
+  #board { top: 10px; right: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; min-width: 128px; }
+  #board .h { color: var(--muted); font-size: 10px; letter-spacing: .12em; margin-bottom: 3px; display: flex; justify-content: space-between; gap: 10px; }
+  #board .row { display: flex; justify-content: space-between; gap: 10px; white-space: nowrap; }
+  #board .row span:first-child { overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+  #board .me { color: var(--accent); }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+  .live { color: var(--accent); }
+  .live::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 5px; vertical-align: 1px; animation: pulse 1.4s infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  #feed { left: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 3px; max-width: 60%; }
+  #feed div { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; font-size: 11px; animation: fade 4s forwards; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @keyframes fade { 0% { opacity: 0; transform: translateY(4px); } 8%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
+  .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
+    background: radial-gradient(ellipse at center, rgba(7,9,12,.55), rgba(7,9,12,.88)); }
+  .overlay.hidden { display: none; }
+  .card { width: min(320px, 100%); text-align: center; }
+  .title { font-family: 'Silkscreen', monospace; font-size: clamp(30px, 11vw, 52px); line-height: .95; letter-spacing: .02em; color: var(--accent);
+    text-shadow: 0 0 18px rgba(124,255,178,.35); }
+  .title small { display: block; font-size: .36em; color: var(--text); text-shadow: none; letter-spacing: .3em; margin-top: 6px; }
+  .sub { color: var(--muted); font-size: 12px; margin: 12px 0 16px; }
+  .sub .live { font-weight: 700; }
+  input { width: 100%; font: inherit; font-size: 15px; padding: 11px 12px; border-radius: 8px; border: 1px solid var(--line);
+    background: rgba(255,255,255,.04); color: var(--text); outline: none; text-align: center; }
+  input:focus { border-color: var(--accent); }
+  button { width: 100%; margin-top: 8px; font-family: 'Silkscreen', monospace; font-size: 17px; padding: 11px; border: 0; border-radius: 8px;
+    background: var(--accent); color: #062312; cursor: pointer; letter-spacing: .06em; }
+  button:active { transform: translateY(1px); }
+  .keys { color: var(--muted); font-size: 11px; margin-top: 12px; }
+  .big { font-family: 'Silkscreen', monospace; font-size: 44px; color: var(--warn); line-height: 1; }
+  .why { margin: 8px 0 4px; font-size: 13px; }
+  .best { color: var(--muted); font-size: 12px; }
+  #conn { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--muted); font-size: 12px; display: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="stats" class="hud"><b id="score">0</b> <span style="color:var(--muted)">length</span> <span id="len">4</span></div>
+<div id="board" class="hud"></div>
+<div id="feed" class="hud"></div>
+<div id="conn">connecting to the world…</div>
+
+<div id="start" class="overlay">
+  <div class="card">
+    <div class="title">SNAKE<small>IN A POST</small></div>
+    <p class="sub">one world for everyone who opens this post<br><span class="live" id="onlineStart">0 online</span></p>
+    <input id="name" maxlength="14" placeholder="your name" autocomplete="off" spellcheck="false">
+    <button id="play">PLAY</button>
+    <p class="keys">arrows / WASD · swipe on phone</p>
+  </div>
+</div>
+
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <div class="big" id="final">0</div>
+    <p class="why" id="why">you crashed</p>
+    <p class="best" id="best">best 0</p>
+    <button id="again">PLAY AGAIN</button>
+    <p class="keys">space / enter</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const $ = (id) => document.getElementById(id);
+  const VIEW = 26;                 // cells visible across the short side while playing
+  let W = 72, H = 72, TICK = 110;
+  let ws = null, myId = null, playing = false, retry = 500;
+  let prev = null, cur = null, curAt = 0;
+  let cam = { x: 36, y: 36, z: 0 }; // z: cell size in px
+  let dpr = 1, vw = 0, vh = 0;
+  let best = 0;
+
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+  $('name').value = store.get('snake.name') || '';
+  best = +(store.get('snake.best') || 0);
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    vw = innerWidth; vh = innerHeight;
+    cv.width = vw * dpr; cv.height = vh * dpr;
+  }
+  addEventListener('resize', resize); resize();
+
+  // ---------- network ----------
+  function connect() {
+    const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
+    ws = new WebSocket(url);
+    ws.onopen = () => { retry = 500; $('conn').style.display = 'none'; if (playing) join(); };
+    ws.onmessage = (e) => {
+      const m = JSON.parse(e.data);
+      if (m.type === 'hello') { W = m.W; H = m.H; TICK = m.tick; }
+      else if (m.type === 'state') onState(m);
+      else if (m.type === 'you') { myId = m.id; }
+      else if (m.type === 'dead') onDead(m);
+    };
+    ws.onclose = () => {
+      $('conn').style.display = 'block';
+      setTimeout(connect, retry); retry = Math.min(retry * 2, 8000);
+    };
+  }
+  const send = (o) => ws && ws.readyState === 1 && ws.send(JSON.stringify(o));
+  function join() {
+    const name = $('name').value.trim() || 'anon';
+    store.set('snake.name', name);
+    send({ type: 'join', name });
+    playing = true;
+    $('start').classList.add('hidden'); $('over').classList.add('hidden');
+    $('stats').style.display = 'block';
+    cv.focus && cv.focus();
+  }
+
+  function onState(m) {
+    W = m.W; H = m.H;
+    const map = new Map();
+    for (const s of m.s) {
+      const body = [];
+      for (let i = 0; i < s.b.length; i += 2) body.push([s.b[i], s.b[i + 1]]);
+      map.set(s.id, { ...s, body });
+    }
+    const food = [];
+    for (let i = 0; i < m.f.length; i += 3) food.push([m.f[i], m.f[i + 1], m.f[i + 2]]);
+    prev = cur; cur = { snakes: map, food, board: m.board, online: m.online, t: performance.now() };
+    curAt = performance.now();
+    renderBoard(m.board, m.online);
+    for (const ev of m.ev) pushFeed(ev);
+    const me = map.get(myId);
+    if (me) { $('score').textContent = me.sc; $('len').textContent = me.body.length; }
+  }
+
+  function onDead(m) {
+    best = Math.max(best, m.score); store.set('snake.best', best);
+    $('final').textContent = m.score;
+    const why = { wall: 'you hit the wall', self: 'you bit yourself', head: 'head-on crash', body: 'you ran into a snake' }[m.reason] || 'you crashed';
+    $('why').textContent = m.by ? 'eaten by ' + m.by : why;
+    $('best').textContent = 'best ' + best;
+    setTimeout(() => { if (!isAlive()) $('over').classList.remove('hidden'); }, 650);
+  }
+  const isAlive = () => cur && cur.snakes.has(myId);
+
+  // ---------- hud ----------
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function renderBoard(board, online) {
+    $('onlineStart').textContent = online ? online + ' playing now' : 'be the first one here';
+    const me = cur && cur.snakes.get(myId);
+    let html = `<div class="h"><span>TOP</span><span class="live">${online}</span></div>`;
+    for (const r of board) {
+      const mine = me && r.n === me.n && r.sc === me.sc;
+      html += `<div class="row${mine ? ' me' : ''}"><span><i class="dot" style="background:${r.c}"></i>${esc(r.n)}</span><span>${r.sc}</span></div>`;
+    }
+    $('board').innerHTML = html;
+  }
+  function pushFeed(ev) {
+    const el = document.createElement('div');
+    const n = (name, c) => `<b style="color:${c}">${esc(name)}</b>`;
+    if (ev.t === 'kill') el.innerHTML = `${n(ev.a, ev.ac)} ate ${n(ev.b, ev.bc)}`;
+    else if (ev.r === 'left') return;
+    else el.innerHTML = `${n(ev.b, ev.bc)} ${ev.r === 'wall' ? 'hit the wall' : ev.r === 'self' ? 'bit itself' : 'crashed'}`;
+    const feed = $('feed'); feed.appendChild(el);
+    while (feed.children.length > 4) feed.firstChild.remove();
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  // ---------- input ----------
+  const KEYS = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
+  addEventListener('keydown', (e) => {
+    if (document.activeElement === $('name')) { if (e.key === 'Enter') join(); return; }
+    const d = KEYS[e.code];
+    if (d) { e.preventDefault(); send({ type: 'dir', d }); return; }
+    if ((e.code === 'Space' || e.code === 'Enter') && !isAlive()) { e.preventDefault(); join(); }
+  });
+  let t0 = null;
+  cv.addEventListener('touchstart', (e) => { const t = e.touches[0]; t0 = { x: t.clientX, y: t.clientY }; e.preventDefault(); }, { passive: false });
+  cv.addEventListener('touchmove', (e) => {
+    if (!t0) return; e.preventDefault();
+    const t = e.touches[0], dx = t.clientX - t0.x, dy = t.clientY - t0.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+    send({ type: 'dir', d: Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up') });
+    t0 = { x: t.clientX, y: t.clientY };
+  }, { passive: false });
+  cv.addEventListener('touchend', () => { t0 = null; });
+  $('play').onclick = join; $('again').onclick = join;
+
+  // ---------- render ----------
+  const lerp = (a, b, t) => a + (b - a) * t;
+  function shade(hex, f) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = Math.round(((n >> 16) & 255) * f), g = Math.round(((n >> 8) & 255) * f), b = Math.round((n & 255) * f);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#07090c'; ctx.fillRect(0, 0, vw, vh);
+    if (!cur) return;
+    const a = Math.min(1, (now - curAt) / TICK);
+
+    // interpolated bodies
+    const drawn = [];
+    for (const s of cur.snakes.values()) {
+      const p = prev && prev.snakes.get(s.id);
+      const pts = s.body.map((c, i) => {
+        const q = p && p.body[i];
+        return q && Math.abs(q[0] - c[0]) + Math.abs(q[1] - c[1]) <= 1 ? [lerp(q[0], c[0], a), lerp(q[1], c[1], a)] : [c[0], c[1]];
+      });
+      drawn.push({ s, pts });
+    }
+
+    // camera: follow me while alive, otherwise show the whole world
+    const short = Math.min(vw, vh);
+    const mine = drawn.find(d => d.s.id === myId);
+    let tx, ty, tz;
+    if (mine) { tx = mine.pts[0][0] + .5; ty = mine.pts[0][1] + .5; tz = short / VIEW; }
+    else { tx = W / 2; ty = H / 2; tz = (short - 24) / Math.max(W, H); }
+    if (!cam.z) cam = { x: tx, y: ty, z: tz };
+    const k = mine && cam.z > tz * 0.98 ? 0.35 : 0.08;
+    cam.x = lerp(cam.x, tx, k); cam.y = lerp(cam.y, ty, k); cam.z = lerp(cam.z, tz, 0.08);
+    const z = cam.z;
+    const ox = vw / 2 - cam.x * z, oy = vh / 2 - cam.y * z;
+    const X = (x) => ox + x * z, Y = (y) => oy + y * z;
+
+    // arena
+    ctx.fillStyle = '#0c1015'; ctx.fillRect(X(0), Y(0), W * z, H * z);
+    if (z > 7) {
+      ctx.fillStyle = 'rgba(255,255,255,.055)';
+      const x0 = Math.max(0, Math.floor(-ox / z)), x1 = Math.min(W, Math.ceil((vw - ox) / z));
+      const y0 = Math.max(0, Math.floor(-oy / z)), y1 = Math.min(H, Math.ceil((vh - oy) / z));
+      const r = Math.max(1, z * .06);
+      for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) ctx.fillRect(X(x) - r / 2, Y(y) - r / 2, r, r);
+    }
+    ctx.strokeStyle = 'rgba(124,255,178,.5)'; ctx.lineWidth = Math.max(1.5, z * .12);
+    ctx.strokeRect(X(0), Y(0), W * z, H * z);
+
+    // food
+    const pulse = 0.85 + Math.sin(now / 260) * 0.15;
+    for (const [fx, fy, v] of cur.food) {
+      const cx = X(fx + .5), cy = Y(fy + .5);
+      if (cx < -z || cy < -z || cx > vw + z || cy > vh + z) continue;
+      const col = v === 3 ? '#FFD166' : v === 2 ? '#FF6B9A' : '#e9f1ea';
+      ctx.fillStyle = col;
+      ctx.shadowColor = col; ctx.shadowBlur = z * .6;
+      ctx.beginPath(); ctx.arc(cx, cy, z * (v === 3 ? .3 : .19) * pulse, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    // snakes (mine on top)
+    drawn.sort((p, q) => (p.s.id === myId) - (q.s.id === myId));
+    for (const { s, pts } of drawn) {
+      const path = () => { ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, X(x + .5), Y(y + .5))); };
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      if (s.id === myId) { ctx.shadowColor = s.c; ctx.shadowBlur = z * .8; }
+      path(); ctx.strokeStyle = shade(s.c, .45); ctx.lineWidth = z * .86; ctx.stroke();
+      ctx.shadowBlur = 0;
+      path(); ctx.strokeStyle = s.c; ctx.lineWidth = z * .64; ctx.stroke();
+      // head + eyes
+      const [hx, hy] = pts[0];
+      const cx = X(hx + .5), cy = Y(hy + .5);
+      ctx.fillStyle = s.c; ctx.beginPath(); ctx.arc(cx, cy, z * .46, 0, Math.PI * 2); ctx.fill();
+      const dir = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[s.d] || [1, 0];
+      const px = -dir[1], py = dir[0];
+      for (const sgn of [-1, 1]) {
+        const ex = cx + dir[0] * z * .14 + px * sgn * z * .2, ey = cy + dir[1] * z * .14 + py * sgn * z * .2;
+        ctx.fillStyle = '#07090c'; ctx.beginPath(); ctx.arc(ex, ey, z * .11, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex + dir[0] * z * .04, ey + dir[1] * z * .04, z * .045, 0, Math.PI * 2); ctx.fill();
+      }
+      if (z > 9 && s.id !== myId) {
+        ctx.font = `700 ${Math.max(10, z * .42)}px JetBrains Mono, monospace`;
+        ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(233,241,234,.75)';
+        ctx.fillText(s.n, cx, cy - z * .85);
+      }
+    }
+
+    // minimap while playing
+    if (mine) {
+      const m = Math.round(Math.min(96, short * .22)), mx = vw - m - 10, my = vh - m - 10, ms = m / Math.max(W, H);
+      ctx.fillStyle = 'rgba(10,14,19,.8)'; ctx.fillRect(mx, my, m, m);
+      ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1; ctx.strokeRect(mx + .5, my + .5, m - 1, m - 1);
+      for (const { s, pts } of drawn) {
+        ctx.fillStyle = s.id === myId ? '#fff' : s.c;
+        const sz = s.id === myId ? 3.5 : 2;
+        for (let i = 0; i < pts.length; i += 2) ctx.fillRect(mx + pts[i][0] * ms, my + pts[i][1] * ms, sz, sz);
+      }
+      ctx.strokeStyle = 'rgba(255,255,255,.35)';
+      ctx.strokeRect(mx + (cam.x - vw / 2 / z) * ms, my + (cam.y - vh / 2 / z) * ms, vw / z * ms, vh / z * ms);
+    }
+  }
+
+  connect();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
