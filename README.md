@@ -1,50 +1,50 @@
 # Snake in a Post
 
-Змійка, яка грається прямо в пості на X. Механіка як у пості jaivin з Minecraft: player-картка в стрічці, і **всі, хто відкрив embed, грають в одному світі**.
+Snake that you play right inside a post on X. It works like jaivin's Minecraft post: a player card in the timeline, and **everyone who opens the embed plays in the same world**.
 
-- Спільна арена 72×72, сервер сам рахує всю гру, клієнт шле лише напрямок
-- Світ ніколи не пустий: якщо живих гравців менше 4, решту місць займають боти
-- Помер, і твоє тіло стає їжею для інших. Хто тебе з'їв, видно в стрічці подій
-- Топ-5, лічильник онлайну, мінікарта, плавна анімація
-- Керування: стрілки / WASD, на телефоні свайпи
+- One shared 72×72 arena. The server runs the whole game; clients only send their direction
+- The world is never empty: when fewer than 4 snakes are alive, bots fill the gaps
+- When you die, your body turns into food for everyone else. The kill feed shows who ate whom
+- Top 5 leaderboard, online counter, minimap, smooth animation
+- Controls: arrow keys / WASD, swipe on mobile
 
-## Запуск локально
+## Run locally
 
 ```bash
 npm install
 npm start          # http://localhost:3000
 ```
 
-Відкрий у двох вкладках, і побачиш себе в обох.
+Open it in two tabs and you'll see yourself in both.
 
-## Як виставити в пост
+## Put it in a post
 
-1. **Задеплой на HTTPS-хостинг з підтримкою WebSocket.** Найпростіше: Render.com → New → Web Service → цей репозиторій. Build: `npm install`, Start: `npm start`. Підійдуть також Fly.io і Railway (є `Dockerfile`).
-2. **Пропиши змінну `PUBLIC_URL`** з адресою сайту, наприклад `https://snake-xyz.onrender.com`. Без неї сервер бере адресу із запиту, але явна адреса надійніша для картки.
-3. **Встав посилання в пост.** X прочитає мета-теги `twitter:card=player` і покаже гру прямо в стрічці (картка 480×480, постер `public/poster.png`).
+1. **Deploy to any HTTPS host that supports WebSockets.** Easiest: Render.com → New → Web Service → this repo. Build: `npm install`, Start: `npm start`. Fly.io and Railway work too (there's a `Dockerfile`).
+2. **Set the `PUBLIC_URL` env variable** to your site's address, e.g. `https://snake-xyz.onrender.com`. Without it the server takes the address from the request, but an explicit URL is more reliable for the card.
+3. **Paste the link into a post.** X reads the `twitter:card=player` meta tags and shows the game right in the timeline (480×480 card, poster at `public/poster.png`).
 
-Що варто знати:
-- Чи показати живу гру, вирішує X. Якщо player-картка не розгорнеться, буде картинка-постер з посиланням: гра все одно відкриється по кліку.
-- На безкоштовному Render сервер засинає після 15 хвилин без трафіку. Перше відкриття після сну триває 30–50 секунд. Для поста, який має полетіти, бери платний інстанс або Fly.io.
-- Один процес на всіх: стану в базі немає, рестарт сервера = новий світ.
+Good to know:
+- X decides whether to render the live player. If it doesn't, the post shows the poster image with a link, and the game opens on click.
+- On Render's free plan the server sleeps after 15 minutes without traffic. The first visit after that takes about a minute. For a post you expect to take off, use a paid instance or Fly.io.
+- One process for everyone, no database: restarting the server means a fresh world.
 
-## Налаштування
+## Settings
 
-Усе в шапці `server.js`:
+All at the top of `server.js`:
 
-| Константа | Що робить | Зараз |
+| Constant | What it does | Default |
 |---|---|---|
-| `W`, `H` | розмір світу в клітинках | 72 × 72 |
-| `TICK_MS` | швидкість гри (менше = швидше) | 110 |
-| `MIN_SNAKES` | скільки змійок тримати в світі ботами | 4 |
-| `START_LEN` | стартова довжина | 4 |
+| `W`, `H` | world size in cells | 72 × 72 |
+| `TICK_MS` | game speed (lower = faster) | 110 |
+| `MIN_SNAKES` | how many snakes bots keep in the world | 4 |
+| `START_LEN` | starting length | 4 |
 
-## Файли
+## Files
 
 ```
-server.js          сервер: HTTP + WebSocket, ігровий цикл, боти, мета-теги картки
-public/index.html  клієнт: canvas, HUD, керування
-public/poster.png  превʼю для картки X
+server.js          server: HTTP + WebSocket, game loop, bots, card meta tags
+public/index.html  client: canvas, HUD, controls
+public/poster.png  preview image for the X card
 public/favicon.svg
 Dockerfile
 ```
